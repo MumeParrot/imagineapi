@@ -16,7 +16,7 @@ BASE_URL = "http://localhost:8055"
 AUTH_TOKEN = os.environ.get("IMAGINE_API_TOKEN", "your-token-here")
 PARROT_DIR = os.environ.get("PARROT_DIR", "parrots")
 
-BACKUP_THRESHOLD = os.environ.get("BACKUP_THRESHOLD", 100)
+BACKUP_THRESHOLD = os.environ.get("BACKUP_THRESHOLD", 32)
 BACKUP_AMOUNT = os.environ.get("BACKUP_AMOUNT", 32)
 
 PIGEON_PROB = os.environ.get("PIGEON_PROB", 0.01)
@@ -169,7 +169,7 @@ def poll_until_complete(
                 print(
                     f"✓ Generation complete! Downloading {len(upscaled_urls)} image(s)..."
                 )
-                for idx, url in enumerate(upscaled_urls, 1):
+                for idx, url in enumerate(upscaled_urls):
                     download_image(url, parrot_id_base + idx)
             else:
                 print("✗ No upscaled URLs found in completed response")
@@ -225,7 +225,7 @@ def main():
 
         # Step 2: Poll until complete and download
         print(f"\n[{i}] Polling for completion...")
-        poll_until_complete(image_id, n_parrots + 1 + i)
+        poll_until_complete(image_id, n_parrots + 1 + i * 4)
 
     print("\n=== Done ===")
 
