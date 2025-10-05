@@ -124,7 +124,7 @@ def download_image(url: str, parrot_id: int) -> None:
 
     # Extract file extension from URL or default to .png
     ext = url.split(".")[-1] if "." in url.split("/")[-1] else "png"
-    filename = f"parrot-{parrot_id}.{ext}"
+    filename = f"parrot-{parrot_id:06d}.{ext}"
     filepath = os.path.join(PARROT_DIR, filename)
 
     try:
@@ -225,7 +225,7 @@ def main():
 
         # Step 2: Poll until complete and download
         print(f"\n[{i}] Polling for completion...")
-        poll_until_complete(image_id, n_parrots + i)
+        poll_until_complete(image_id, n_parrots + 1 + i)
 
     print("\n=== Done ===")
 
