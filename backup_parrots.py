@@ -58,7 +58,7 @@ PROMPTS = [
     "cute, loudly squaking adorable parrot character, roughly drawn, sitting inside a paper airplane with stock charts attached, simple background, circular png",
     "cute, loudly squaking playful parrot character, roughly drawn, balancing a pile of coins with a stock chart in its claws, simple background, circular png",
     "cute, loudly squaking silly parrot character, roughly drawn, standing on a pile of colorful papers with stock graphs and arrows, simple background, circular png",
-        "cute, loudly squaking silly parrot character, roughly drawn, perched on a pile of coins with stock charts around, simple background, circular png",
+    "cute, loudly squaking silly parrot character, roughly drawn, perched on a pile of coins with stock charts around, simple background, circular png",
     "cute, loudly squaking happy parrot character, roughly drawn, sitting next to a laptop showing stock investing graphs, simple background, circular png",
     "cute, loudly squaking goofy parrot character, roughly drawn, surrounded by floating stock arrows and money bills, simple background, circular png",
     "cute, loudly squaking playful parrot character, roughly drawn, flying over stock charts with green arrows, simple background, circular png",
@@ -189,7 +189,9 @@ def poll_until_complete(
 
 
 def main():
-    print(f"=== {datetime.now().strftime("%Y-%m-%d")}: Backing Parrot Images... ===\n")
+    print(
+        f"=== {datetime.now().strftime('%Y-%m-%d')}: Backing Parrot Images... ===\n"
+    )
 
     try:
         with open(f"{PARROT_DIR}/counter", "r") as fd:
