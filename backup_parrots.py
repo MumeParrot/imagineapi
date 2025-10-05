@@ -16,12 +16,12 @@ BASE_URL = "http://localhost:8055"
 AUTH_TOKEN = os.environ.get("IMAGINE_API_TOKEN", "your-token-here")
 PARROT_DIR = os.environ.get("PARROT_DIR", "parrots")
 
-BACKUP_THRESHOLD = os.environ.get("BACKUP_THRESHOLD", 32)
-BACKUP_AMOUNT = os.environ.get("BACKUP_AMOUNT", 32)
+BACKUP_THRESHOLD = int(os.environ.get("BACKUP_THRESHOLD", 32))
+BACKUP_AMOUNT = int(os.environ.get("BACKUP_AMOUNT", 32))
 
-PIGEON_PROB = os.environ.get("PIGEON_PROB", 0.01)
-CHICKEN_PROB = os.environ.get("CHICKEN_PROB", 0.03)
-EAGLE_PROB = os.environ.get("EAGLE_PROB", 0.03)
+PIGEON_PROB = float(os.environ.get("PIGEON_PROB", 0.01))
+CHICKEN_PROB = float(os.environ.get("CHICKEN_PROB", 0.03))
+EAGLE_PROB = float(os.environ.get("EAGLE_PROB", 0.03))
 
 # Prompt pool
 PROMPTS = [
