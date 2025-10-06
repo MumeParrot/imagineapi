@@ -8,6 +8,10 @@ import os
 import time
 import random
 import requests
+import smtplib
+import traceback
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from typing import Optional
 
@@ -80,6 +84,13 @@ PROMPTS = [
     "cute, loudly squaking silly parrot character, roughly drawn, perched on colorful charts with coins and arrows floating, simple background, circular png",
 ]
 
+# Email Configuration
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SENDER_EMAIL = os.environ.get("SMTP_USER", "mumeparrot@gmail.com")
+SENDER_PASSWORD = os.environ.get("SMTP_PASS", "")
+RECIPIENT_EMAIL = os.environ.get("ERROR_REPORT_EMAIL", "mumeparrot@gmail.com")
+
 # Headers
 HEADERS = {
     "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -87,35 +98,27 @@ HEADERS = {
 }
 
 
-def create_image_request(prompt: str) -> Optional[str]:
+def create_image_request(prompt: str) -> str:
     """Send POST request to create image generation task."""
     url = f"{BASE_URL}/items/images"
     payload = {"prompt": prompt}
 
-    try:
-        response = requests.post(url, json=payload, headers=HEADERS)
-        response.raise_for_status()
-        data = response.json()
-        image_id = data["data"]["id"]
-        print(f"✓ Image generation requested (ID: {image_id})")
-        print(f"  Prompt: {prompt}")
-        return image_id
-    except requests.exceptions.RequestException as e:
-        print(f"✗ Error creating image request: {e}")
-        return None
+    response = requests.post(url, json=payload, headers=HEADERS)
+    response.raise_for_status()
+    data = response.json()
+    image_id = data["data"]["id"]
+    print(f"✓ Image generation requested (ID: {image_id})")
+    print(f"  Prompt: {prompt}")
+    return image_id
 
 
 def check_image_status(image_id: str) -> dict:
     """Send GET request to check image generation status."""
     url = f"{BASE_URL}/items/images/{image_id}"
 
-    try:
-        response = requests.get(url, headers=HEADERS)
-        response.raise_for_status()
-        return response.json()["data"]
-    except requests.exceptions.RequestException as e:
-        print(f"✗ Error checking image status: {e}")
-        return {}
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()
+    return response.json()["data"]
 
 
 def download_image(url: str, parrot_id: int) -> None:
@@ -127,17 +130,14 @@ def download_image(url: str, parrot_id: int) -> None:
     filename = f"parrot-{parrot_id:06d}.{ext}"
     filepath = os.path.join(PARROT_DIR, filename)
 
-    try:
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
 
-        with open(filepath, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+    with open(filepath, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
 
-        print(f"  ✓ Downloaded: {filepath}")
-    except requests.exceptions.RequestException as e:
-        print(f"  ✗ Error downloading image: {e}")
+    print(f"  ✓ Downloaded: {filepath}")
 
 
 def poll_until_complete(
@@ -153,7 +153,7 @@ def poll_until_complete(
         data = check_image_status(image_id)
 
         if not data:
-            break
+            raise Exception("None received from check_image_status")
 
         status = data.get("status")
         progress = data.get("progress")
@@ -172,20 +172,54 @@ def poll_until_complete(
                 for idx, url in enumerate(upscaled_urls):
                     download_image(url, parrot_id_base + idx)
             else:
-                print("✗ No upscaled URLs found in completed response")
+                raise Exception(
+                    "✗ No upscaled URLs found in completed response"
+                )
             break
         elif status == "failed":
             error = data.get("error", "Unknown error")
-            print(f"✗ Generation failed: {error}")
-            break
+            raise Exception(f"✗ Generation failed: {error}")
 
         time.sleep(poll_interval)
         elapsed += poll_interval
 
     if elapsed >= max_wait:
-        print(
+        raise Exception(
             f"✗ Timeout: Image generation took longer than {max_wait} seconds"
         )
+
+
+def send_error_email(error_message: str) -> None:
+    """Send error notification email via Gmail SMTP."""
+    if not SENDER_PASSWORD:
+        print("✗ SMTP_SENDER_PASSWORD not set, skipping email notification")
+        return
+
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = SENDER_EMAIL
+        msg["To"] = RECIPIENT_EMAIL
+        msg["Subject"] = (
+            f"Parrot Backup Error - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+
+        body = f"""Parrot backup script encountered an error:
+
+{error_message}
+
+Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+        msg.attach(MIMEText(body, "plain"))
+
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+
+        print(f"✓ Error notification email sent to {RECIPIENT_EMAIL}")
+    except Exception as e:
+        print(f"✗ Failed to send error email: {e}")
 
 
 def main():
@@ -222,9 +256,6 @@ def main():
         # Step 1: Create image generation request
         image_id = create_image_request(prompt)
 
-        if not image_id:
-            return
-
         # Step 2: Poll until complete and download
         print(f"\n[{i}] Polling for completion...")
         poll_until_complete(image_id, n_parrots + 1 + i * 4)
@@ -233,4 +264,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        error_message = f"{str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        print(f"\n✗ Error occurred:\n{error_message}")
+        send_error_email(error_message)
+        raise
